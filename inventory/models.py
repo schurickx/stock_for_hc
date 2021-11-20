@@ -6,7 +6,7 @@ from django.db import models
 class Positions(models.Model):
     THING = 'TH'
     KILOGRAM = 'KG'
-    LITER = 'L'
+    LITER = 'LT'
     UNIT = [(THING, 'шт.'), (KILOGRAM, 'кг.'), (LITER, 'л.'), ]
 
     title = models.CharField(max_length=255, verbose_name="Наименование")
@@ -39,7 +39,7 @@ class Providers(models.Model):
 
 # Модель Категории
 class Categories(models.Model):
-    title = models.CharField(max_length=100, verbose_name="Категория")
+    title = models.CharField(max_length=100, unique=True, verbose_name="Категория")
 
     def __str__(self):
         return self.title
@@ -52,7 +52,7 @@ class Categories(models.Model):
 
 # Модель Объекты
 class Entity(models.Model):
-    title = models.CharField(max_length=20, verbose_name="Объекты")
+    title = models.CharField(max_length=20, unique=True, verbose_name="Объекты")
 
     def __str__(self):
         return self.title
