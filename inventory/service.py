@@ -55,29 +55,36 @@ class Fill:
         "Отопление(оборудование)", "Отопление(расх. материалы)"
     ]
 
-    def fill_position(self):
-        Positions.objects.bulk_create([
-            Positions(title=i, unit=Positions.THING, provider_id=random.randint(1, 14))
-            for i in self.position
+    def fill_all(self):
+        self.fill_categories()
+        self.fill_provider()
+        self.fill_invoices()
+        self.fill_objects()
+        self.fill_position()
+
+    def fill_categories(self):
+        Category.objects.bulk_create([
+            Category(title=i) for i in self.cat
         ])
 
     def fill_provider(self):
-        Providers.objects.bulk_create([
-            Providers(title=i) for i in self.provider
+        Provider.objects.bulk_create([
+            Provider(title=i) for i in self.provider
+        ])
+
+    def fill_position(self):
+        Position.objects.bulk_create([
+            Position(title=i, unit=Position.THING, provider_id=random.randint(1, 14))
+            for i in self.position
         ])
 
     def fill_invoices(self):
-        Invoices.objects.bulk_create([
-            Invoices(title=i, provider_id=random.randint(1, 14))
+        Invoice.objects.bulk_create([
+            Invoice(title=i, provider_id=random.randint(1, 14))
             for i in self.invoice
         ])
 
     def fill_objects(self):
         Entity.objects.bulk_create([
             Entity(title=i) for i in self.obj
-        ])
-
-    def fill_categories(self):
-        Categories.objects.bulk_create([
-            Categories(title=i) for i in self.cat
         ])
