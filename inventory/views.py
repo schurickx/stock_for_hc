@@ -1,18 +1,16 @@
 from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from .models import Provider, Position, Category, Entity, Invoice
-from .serializers import PositionSerializer, ProviderSerializer, CategorySerializer, EntitySerializer, InvoiceSerializer
+from .models import Provider, Position, Category, Entity, Invoice, Operation, OperationDetail, Stock
+from .serializers import PositionSerializer, ProviderSerializer, CategorySerializer, EntitySerializer, \
+    InvoiceSerializer, OperationSerializer, OperationDetailSerializer, StockSerializer
 from rest_framework.authentication import BasicAuthentication
 
 from .utils import CsrfExemptSessionAuthentication
-
-
-def index(request):
-    return HttpResponse("Home")
 
 
 class PositionViewSet(ModelViewSet):
@@ -63,3 +61,34 @@ class InvoiceViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ('id', 'title', 'provider', 'shipping_date',)
     ordering_fields = ('title', 'shipping_date')
+
+
+class OperationViewSet(ModelViewSet):
+    authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
+    queryset = Operation.objects.all()
+    serializer_class = OperationSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ('id', 'kind', 'shipping_date')
+    ordering_fields = ('shipping_date',)
+
+
+class OperationDetailViewSet(ModelViewSet):
+    authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
+    queryset = OperationDetail.objects.all()
+    serializer_class = OperationDetailSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ('operation', 'position',)
+    ordering_fields = ('operation',)
+
+
+# class StockViewSet(ReadOnlyModelViewSet):
+class StockViewSet(ModelViewSet):
+    authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
+    queryset = Stock.objects.all()
+    serializer_class = StockSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ('entity', 'position', 'invoice',)
+    ordering_fields = ('position', 'quantity', 'time_create',)

@@ -1,18 +1,20 @@
 from rest_framework.serializers import ModelSerializer
 
-from .models import Position, Provider, Category, Entity, OperationDetail, Invoice
-
-
-class PositionSerializer(ModelSerializer):
-    class Meta:
-        model = Position
-        fields = '__all__'
+from .models import Position, Provider, Category, Entity, OperationDetail, Invoice, Operation, Stock
 
 
 class ProviderSerializer(ModelSerializer):
     class Meta:
         model = Provider
         fields = ('id', 'title')
+
+
+class PositionSerializer(ModelSerializer):
+    # provider = ProviderSerializer(read_only=True)
+
+    class Meta:
+        model = Position
+        fields = '__all__'
 
 
 class CategorySerializer(ModelSerializer):
@@ -27,13 +29,25 @@ class EntitySerializer(ModelSerializer):
         fields = '__all__'
 
 
+class InvoiceSerializer(ModelSerializer):
+    class Meta:
+        model = Invoice
+        exclude = ('time_create', 'create_date',)
+
+
+class StockSerializer(ModelSerializer):
+    class Meta:
+        model = Stock
+        exclude = ('time_create', 'create_date',)
+
+
 class OperationDetailSerializer(ModelSerializer):
     class Meta:
         model = OperationDetail
         fields = '__all__'
 
 
-class InvoiceSerializer(ModelSerializer):
+class OperationSerializer(ModelSerializer):
     class Meta:
-        model = Invoice
-        exclude = ('time_create', 'create_date',)
+        model = Operation
+        fields = '__all__'

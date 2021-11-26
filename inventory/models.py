@@ -4,16 +4,18 @@ from django.db import models
 
 # Модель Перечень позиций
 class Position(models.Model):
-    THING = 'TH'
-    KILOGRAM = 'KG'
-    LITER = 'LT'
-    UNIT = [(THING, 'шт.'), (KILOGRAM, 'кг.'), (LITER, 'л.'), ]
+    class Unit(models.TextChoices):
+        THING = 'TH', 'шт.'
+        KILOGRAM = 'KG', 'кг.'
+        ROLL = 'RL', 'рул.'
+        KIT = 'KT', 'компл.'
 
     title = models.CharField(max_length=255, verbose_name="Наименование")
-    unit = models.CharField(max_length=2, choices=UNIT, default=THING, verbose_name="Единица измерения")
+    unit = models.CharField(max_length=2, choices=Unit.choices, default=Unit.KILOGRAM,
+                            verbose_name="Единица измерения")
     provider = models.ForeignKey('Provider', on_delete=models.PROTECT, verbose_name="Поставщик")
-    category = models.ForeignKey('Category', on_delete=models.SET_NULL, verbose_name="Категория позиции", null=True,
-                                 blank=True)
+    category = models.ForeignKey('Category', on_delete=models.SET_NULL,
+                                 verbose_name="Категория позиции", null=True, blank=True)
 
     def __str__(self):
         return self.title
@@ -92,7 +94,7 @@ class AbstractFullPosition(models.Model):
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
     def __str__(self):
-        return self.position
+        return f'{self.position}'
 
     def save(self, *args, **kwargs):
         self.price_sum = self.quantity * self.price
@@ -105,9 +107,6 @@ class AbstractFullPosition(models.Model):
 # Наличие склада
 class Stock(AbstractFullPosition):
 
-    def __str__(self):
-        return str(self.position)
-
     class Meta:
         verbose_name = 'Наличие на складе'
         verbose_name_plural = 'Наличие на складе'
@@ -115,14 +114,18 @@ class Stock(AbstractFullPosition):
 
 # Модель Операции
 class Operation(models.Model):
-    IN, OUT = 'IN', 'OUT'
-    TYPE = (IN, "Приход"), (OUT, "Расход")
-    kind = models.CharField(max_length=3, choices=TYPE, default=IN, verbose_name="Тип операции")
+    class OperationType(models.TextChoices):
+        RECEIPT = 'IN', "Приход"
+        ISSUE = 'OUT', "Расход"
+    kind = models.CharField(max_length=3, choices=OperationType.choices,
+                            default=OperationType.RECEIPT, verbose_name="Тип операции")
     shipping_date = models.DateField(default=date.today, verbose_name="Дата операции")
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
 
     def __str__(self):
-        return self.kind
+        self.date = self.shipping_date.strftime("%d-%m-%Y")
+        self.label = self.OperationType(self.kind).label
+        return f'{self.label} от {self.date}'
 
     class Meta:
         verbose_name = 'Операция'
@@ -133,10 +136,8 @@ class Operation(models.Model):
 class OperationDetail(AbstractFullPosition):
     operation = models.ForeignKey('Operation', on_delete=models.CASCADE, verbose_name="Операция")
     position = models.ForeignKey('Position', on_delete=models.SET_NULL, verbose_name="Позиция", null=True)
-
-    def __str__(self):
-        return str(self.position)
+    comment = models.TextField(verbose_name="Комментарий", blank=True)
 
     class Meta:
-        verbose_name = 'Список операций по позициям'
-        verbose_name_plural = 'Список операций по позициям'
+        verbose_name = 'Позиция в одной операции'
+        verbose_name_plural = 'Позиции в одной операции'
