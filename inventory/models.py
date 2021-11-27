@@ -1,4 +1,6 @@
 from datetime import date
+
+from django.contrib.auth.models import User
 from django.db import models
 
 
@@ -84,17 +86,19 @@ class Invoice(models.Model):
 
 # Модель Полная позиция для склада
 class AbstractFullPosition(models.Model):
-    position = models.ForeignKey('Position', on_delete=models.PROTECT, verbose_name="Позиция", null=True)
-    entity = models.ForeignKey('Entity', on_delete=models.PROTECT, verbose_name="Объект")
+    position = models.ForeignKey('Position', on_delete=models.PROTECT, verbose_name="Позиция")
+    entity = models.ForeignKey('Entity', on_delete=models.PROTECT, verbose_name="Объект", null=True, blank=True)
     invoice = models.ForeignKey('Invoice', on_delete=models.PROTECT, verbose_name="Счёт", null=True, blank=True)
     quantity = models.PositiveSmallIntegerField(default=1, verbose_name="Количество")
     price = models.DecimalField(max_digits=11, decimal_places=2, verbose_name="Цена за единицу", blank=True)
-    price_sum = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Цена общая", blank=True, editable=False)
+    price_sum = models.DecimalField(max_digits=12, decimal_places=2,
+                                    verbose_name="Цена общая", blank=True, editable=False)
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
     def __str__(self):
-        return f'{self.position}'
+        self.pieces = f'{self.position.Unit(self.position.unit).label}'
+        return f'{self.position} | {self.quantity} {self.pieces}'
 
     def save(self, *args, **kwargs):
         self.price_sum = self.quantity * self.price
@@ -111,16 +115,22 @@ class Stock(AbstractFullPosition):
         verbose_name = 'Наличие на складе'
         verbose_name_plural = 'Наличие на складе'
 
+    def __str__(self):
+        self.row = super().__str__()
+        return f'{self.row} (об. {self.entity})'
+
 
 # Модель Операции
 class Operation(models.Model):
     class OperationType(models.TextChoices):
         RECEIPT = 'IN', "Приход"
         ISSUE = 'OUT', "Расход"
+
     kind = models.CharField(max_length=3, choices=OperationType.choices,
                             default=OperationType.RECEIPT, verbose_name="Тип операции")
     shipping_date = models.DateField(default=date.today, verbose_name="Дата операции")
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name="Создатель", null=True)
 
     def __str__(self):
         self.date = self.shipping_date.strftime("%d-%m-%Y")
@@ -132,7 +142,7 @@ class Operation(models.Model):
         verbose_name_plural = 'Операции'
 
 
-# Модель Позиции в операции
+# Модель Позиции в одной операции
 class OperationDetail(AbstractFullPosition):
     operation = models.ForeignKey('Operation', on_delete=models.CASCADE, verbose_name="Операция")
     position = models.ForeignKey('Position', on_delete=models.SET_NULL, verbose_name="Позиция", null=True)

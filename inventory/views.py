@@ -72,6 +72,9 @@ class OperationViewSet(ModelViewSet):
     filterset_fields = ('id', 'kind', 'shipping_date')
     ordering_fields = ('shipping_date',)
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
 
 class OperationDetailViewSet(ModelViewSet):
     authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)

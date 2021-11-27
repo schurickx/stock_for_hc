@@ -3,24 +3,27 @@ from .models import *
 
 
 @admin.register(Position)
-class PositionsAdmin(admin.ModelAdmin):
+class PositionAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'unit', 'provider', 'category')
+    list_display_links = ('title',)
     search_fields = ('title', 'provider')
-    list_editable = ('title',)
-    list_filter = ('title', 'provider')
+    # list_editable = ('title',)
+    list_filter = ('provider', 'category')
 
 
 @admin.register(Invoice)
 class InvoicesAdmin(admin.ModelAdmin):
     list_display = ('id', 'shipping_date', 'title', 'provider', 'create_date')
+    list_display_links = ('title',)
     search_fields = ('title', 'shipping_date', 'provider',)
-    list_editable = ('shipping_date', 'provider',)
+    # list_editable = ('shipping_date', 'provider',)
     list_filter = ('provider', 'shipping_date')
 
 
 @admin.register(Stock)
 class StockAdmin(admin.ModelAdmin):
     list_display = ('id', 'position', 'quantity', 'price', 'price_sum',)
+    list_display_links = ('id', 'position',)
     search_fields = ('position', 'entity', 'invoice')
     list_filter = ('entity', 'invoice')
 
