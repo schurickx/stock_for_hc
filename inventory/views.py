@@ -86,6 +86,8 @@ class OperationDetailViewSet(ModelViewSet):
     ordering_fields = ('operation',)
 
 
+
+
 # class StockViewSet(ReadOnlyModelViewSet):
 class StockViewSet(ModelViewSet):
     authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)

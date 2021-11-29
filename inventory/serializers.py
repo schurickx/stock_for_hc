@@ -33,12 +33,14 @@ class InvoiceSerializer(ModelSerializer):
     class Meta:
         model = Invoice
         exclude = ('time_create', 'create_date',)
+        # fields = '__all__'
 
 
 class StockSerializer(ModelSerializer):
     class Meta:
         model = Stock
-        exclude = ('time_create', 'create_date',)
+        # fields = '__all__'
+        exclude = ('time_create', 'time_update',)
 
 
 class OperationDetailSerializer(ModelSerializer):

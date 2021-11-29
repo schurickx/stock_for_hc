@@ -93,6 +93,7 @@ class AbstractFullPosition(models.Model):
     price = models.DecimalField(max_digits=11, decimal_places=2, verbose_name="Цена за единицу", blank=True)
     price_sum = models.DecimalField(max_digits=12, decimal_places=2,
                                     verbose_name="Цена общая", blank=True, editable=False)
+    comment = models.TextField(verbose_name="Комментарий", blank=True)
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
@@ -146,7 +147,6 @@ class Operation(models.Model):
 class OperationDetail(AbstractFullPosition):
     operation = models.ForeignKey('Operation', on_delete=models.CASCADE, verbose_name="Операция")
     position = models.ForeignKey('Position', on_delete=models.SET_NULL, verbose_name="Позиция", null=True)
-    comment = models.TextField(verbose_name="Комментарий", blank=True)
 
     class Meta:
         verbose_name = 'Позиция в одной операции'
