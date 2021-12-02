@@ -4,7 +4,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import CreateAPIView, get_object_or_404
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from .models import Provider, Position, Category, Entity, Invoice, Operation, OperationDetail, Stock
 from .serializers import PositionSerializer, ProviderSerializer, CategorySerializer, EntitySerializer, \
@@ -18,7 +18,7 @@ class PositionViewSet(ModelViewSet):
     serializer_class = PositionSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ('id', 'provider', 'category',)
+    filter_fields = ('id', 'provider', 'category',)
     ordering_fields = '__all__'
 
 
@@ -28,7 +28,7 @@ class ProviderViewSet(ModelViewSet):
     serializer_class = ProviderSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ('id', 'title')
+    filter_fields = ('id', 'title')
     ordering_fields = ('title',)
 
 
@@ -38,7 +38,7 @@ class CategoryViewSet(ModelViewSet):
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ('id', 'title')
+    filter_fields = ('id', 'title')
     ordering_fields = ('title',)
 
 
@@ -48,7 +48,7 @@ class EntityViewSet(ModelViewSet):
     serializer_class = EntitySerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ('id', 'title')
+    filter_fields = ('id', 'title')
     ordering_fields = ('title',)
 
 
@@ -58,7 +58,7 @@ class InvoiceViewSet(ModelViewSet):
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ('id', 'title', 'provider', 'shipping_date',)
+    filter_fields = ('id', 'title', 'provider', 'shipping_date',)
     ordering_fields = ('title', 'shipping_date')
 
 
@@ -68,21 +68,12 @@ class OperationViewSet(ModelViewSet):
     serializer_class = OperationSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ('id', 'kind', 'shipping_date')
+    filter_fields = ('id', 'kind', 'shipping_date')
     ordering_fields = ('shipping_date',)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-
-# class OperationDetailViewSet(ModelViewSet):
-#     authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
-#     queryset = OperationDetail.objects.all()
-#     serializer_class = OperationDetailSerializer
-#     permission_classes = [IsAuthenticated]
-#     filter_backends = [DjangoFilterBackend, OrderingFilter]
-#     filterset_fields = ('operation', 'position',)
-#     ordering_fields = ('operation',)
 
 class OperationDetailViewSet(ModelViewSet):
     authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
@@ -90,54 +81,58 @@ class OperationDetailViewSet(ModelViewSet):
     serializer_class = OperationDetailSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ('operation', 'position',)
+    filter_fields = ('operation', 'position',)
     ordering_fields = ('operation',)
 
-    def perform_create(self, serializer):
+    def update_stock(self, serializer):
         data = serializer.validated_data
-        position = data.get('position')
-        entity = data.get('entity')
-        invoice = data.get('invoice')
-        price = data.get('price')
+        params = {
+            'position': data.get('position'),
+            'entity': data.get('entity'),
+            'invoice': data.get('invoice'),
+            'price': data.get('price'),
+        }
         quantity = data.get('quantity')
         type_operation = data.get('operation').kind
-        instance = Stock.objects.filter(position=position, entity=entity,
-                                        invoice=invoice, price=price)
 
-        def is_exists(obj):
-            if not obj.exists():
-                raise ValidationError('Данной позиции нет в наличии на складе')
-            return True
-
-        def quantity_update(q_set, total):
-            q_set.update(quantity=total)
-            for q in q_set:
-                q.save()
-
-        if type_operation == 'IN':
-            if instance.exists():
-                quantity = instance[0].quantity + quantity
-                quantity_update(instance, quantity)
-            else:
+        try:
+            instance = Stock.objects.get(**params)
+            if type_operation == 'IN':
+                instance.quantity += quantity
+            if type_operation == 'OUT':
+                if instance.quantity < quantity:
+                    raise ValidationError(
+                        'Количество позиций для списания превышает наличие на складе')
+                if instance.quantity == quantity:
+                    return instance.delete()
+                if instance.quantity > quantity:
+                    instance.quantity -= quantity
+            return instance.save()
+        except Stock.DoesNotExist:
+            if type_operation == 'IN':
                 stock_serializer = StockSerializer(data=self.request.data)
                 stock_serializer.is_valid(raise_exception=True)
                 stock_serializer.save()
-        if type_operation == 'OUT':
-            if is_exists(instance) and instance[0].quantity > 0 and instance[0].quantity >= quantity:
-                quantity = instance[0].quantity - quantity
-                quantity_update(instance, quantity)
-            else:
-                raise ValidationError('Количество позиций для списания превышает наличие на складе')
+            if type_operation == 'OUT':
+                raise ValidationError('Данной позиции нет в наличии на складе')
 
+    def perform_create(self, serializer):
+        self.update_stock(serializer)
         super().perform_create(serializer)
+
+    def perform_update(self, serializer):
+        # instance = self.get_object()
+        # if serializer.validated_data.get('quantity') != instance.quantity:
+        # self.update_stock(serializer)
+        super().perform_update(serializer)
 
 
 # class StockViewSet(ReadOnlyModelViewSet):
-class StockViewSet(ModelViewSet):
+class StockViewSet(ReadOnlyModelViewSet):
     authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
     queryset = Stock.objects.all()
     serializer_class = StockSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ('entity', 'position', 'invoice',)
+    filter_fields = ('entity', 'position', 'invoice',)
     ordering_fields = ('position', 'quantity', 'time_create',)
