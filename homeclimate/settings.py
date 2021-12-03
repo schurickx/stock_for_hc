@@ -89,6 +89,8 @@ WSGI_APPLICATION = 'homeclimate.wsgi.application'
 #     create database django_db owner user_name;
 #     pip install psycopg2
 #
+#  Reset mirgations python manage.py migrate your_app zero
+#  Delete all records in table and relation tables TRUNCATE TABLE public.inventory_stock CASCADE;
 
 
 DATABASES = {

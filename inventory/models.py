@@ -13,7 +13,7 @@ class Position(models.Model):
         KIT = 'KT', 'компл.'
 
     title = models.CharField(max_length=255, verbose_name="Наименование")
-    unit = models.CharField(max_length=2, choices=Unit.choices, default=Unit.KILOGRAM,
+    unit = models.CharField(max_length=2, choices=Unit.choices, default=Unit.THING,
                             verbose_name="Единица измерения")
     provider = models.ForeignKey('Provider', on_delete=models.PROTECT, verbose_name="Поставщик")
     category = models.ForeignKey('Category', on_delete=models.SET_NULL,
@@ -84,41 +84,23 @@ class Invoice(models.Model):
         ordering = ['shipping_date']
 
 
-# Модель Полная позиция для склада
-class AbstractFullPosition(models.Model):
+# Наличие склада
+class Stock(models.Model):
     position = models.ForeignKey('Position', on_delete=models.PROTECT, verbose_name="Позиция")
     entity = models.ForeignKey('Entity', on_delete=models.PROTECT, verbose_name="Объект", null=True, blank=True)
     invoice = models.ForeignKey('Invoice', on_delete=models.PROTECT, verbose_name="Счёт", null=True, blank=True)
-    quantity = models.PositiveSmallIntegerField(default=1, verbose_name="Количество")
     price = models.DecimalField(max_digits=11, decimal_places=2, verbose_name="Цена за единицу", blank=True)
-    price_sum = models.DecimalField(max_digits=12, decimal_places=2,
-                                    verbose_name="Цена общая", blank=True, editable=False)
+    operations = models.ManyToManyField('Operation', through='OperationDetail', related_name='stock_position')
     comment = models.TextField(verbose_name="Комментарий", blank=True)
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
 
     def __str__(self):
-        self.pieces = f'{self.position.Unit(self.position.unit).label}'
-        return f'{self.position} | {self.quantity} {self.pieces}'
-
-    def save(self, *args, **kwargs):
-        self.price_sum = self.quantity * self.price
-        super().save(*args, **kwargs)
-
-    class Meta:
-        abstract = True
-
-
-# Наличие склада
-class Stock(AbstractFullPosition):
+        return f'{self.position} | {self.entity} | {self.invoice} | {self.price}'
 
     class Meta:
         verbose_name = 'Наличие на складе'
         verbose_name_plural = 'Наличие на складе'
-
-    def __str__(self):
-        self.row = super().__str__()
-        return f'{self.row} (об. {self.entity})'
 
 
 # Модель Операции
@@ -143,10 +125,21 @@ class Operation(models.Model):
         verbose_name_plural = 'Операции'
 
 
-# Модель Позиции в одной операции
-class OperationDetail(AbstractFullPosition):
+# Модель Позиция в одной операции
+class OperationDetail(models.Model):
     operation = models.ForeignKey('Operation', on_delete=models.CASCADE, verbose_name="Операция")
-    position = models.ForeignKey('Position', on_delete=models.SET_NULL, verbose_name="Позиция", null=True)
+    stock = models.ForeignKey('Stock', on_delete=models.PROTECT, verbose_name="Позиция на складе")
+    quantity = models.SmallIntegerField(default=1, verbose_name="Количество")
+    comment = models.TextField(verbose_name="Комментарий", blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.operation.kind == 'OUT':
+            self.quantity = -self.quantity
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        self.pieces = f'{self.stock.position.Unit(self.stock.position.unit).label}'
+        return f'{self.stock.__str__()} - {self.quantity} {self.pieces}'
 
     class Meta:
         verbose_name = 'Позиция в одной операции'

@@ -74,7 +74,7 @@ class Fill:
 
     def fill_position(self):
         Position.objects.bulk_create([
-            Position(title=i, unit=Position.THING, provider_id=random.randint(1, 14))
+            Position(title=i, provider_id=random.randint(1, 14), category_id=random.randint(1, 6))
             for i in self.position
         ])
 

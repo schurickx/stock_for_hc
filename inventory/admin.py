@@ -22,7 +22,7 @@ class InvoicesAdmin(admin.ModelAdmin):
 
 @admin.register(Stock)
 class StockAdmin(admin.ModelAdmin):
-    list_display = ('id', 'position', 'quantity', 'price', 'price_sum',)
+    list_display = ('id', 'position', 'entity', 'invoice', 'price', )
     list_display_links = ('id', 'position',)
     search_fields = ('position', 'entity', 'invoice')
     list_filter = ('entity', 'invoice')
@@ -30,9 +30,8 @@ class StockAdmin(admin.ModelAdmin):
 
 @admin.register(OperationDetail)
 class OperationDetailAdmin(admin.ModelAdmin):
-    list_display = ('id', 'operation', 'position', 'quantity', 'price', 'price_sum',)
-    search_fields = ('position', 'entity', 'invoice')
-    list_filter = ('entity', 'operation', )
+    list_display = ('id', 'operation', 'stock', 'quantity', 'comment', )
+    search_fields = ('operation', 'stock', )
 
 
 admin.site.register(Category)
